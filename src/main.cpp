@@ -92,19 +92,21 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+          vector<double> waypoints_x;
+          vector<double> waypoints_y;
+
           // Affine transformation. Translate to car coordinate system then
           // rotate to the car's orientation.
           // Local coordinates take capital letters. The reference trajectory
           // in local coordinates:
-          vector<double> waypoints;
-          vector<double> waypoints;
-
           // Transform waypoints from car coordinates to world coordinates.
           for (int i = 0; i < ptsx.size(); i++) {
             double dx = ptsx[i] - px;
             double dy = ptsy[i] - py;
             waypoints_x.push_back(dx * cos(-psi) - dy * sin(-psi));
             waypoints_y.push_back(dx * sin(-psi) + dy * cos(-psi));
+            //waypoints_x.push_back(dx * cos(psi) + dy * sin(psi));
+            //waypoints_y.push_back(dy * cos(psi) - dx * sin(psi));
           }
 
           double* ptrx = &waypoints_x[0];
@@ -116,12 +118,13 @@ int main() {
           auto coeffs = polyfit(waypoints_x_map, waypoints_y_map, 3);
 
           // Calculate crosstrack error.
-          double x = 0;
-          double y = 0;
-          double cte = polyeval(coeffs, x) - y;
+          double cte = polyeval(coeffs, 0);
 
           // Calculate orientation error.
-          double epsi = psi - atan(coeffs[1]);
+          double epsi = -atan(coeffs[1]);
+
+          double steer_value = j[1]["steering_angle"];
+          double throttle_value = j[1]["throttle"];
 
           // State in vehicle coordinates: x,y and orientation are always zero
           Eigen::VectorXd state(6);
@@ -133,8 +136,8 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          double steer_value = result[0] / deg2rad(25);
-          double throttle_value = result[1];
+          steer_value = -result[0] / deg2rad(25) * 2.67;
+          throttle_value = result[1];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
