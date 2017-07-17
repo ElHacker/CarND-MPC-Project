@@ -92,6 +92,17 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+          double steer_value = j[1]["steering_angle"];
+          double throttle_value = j[1]["throttle"];
+
+          const double Lf = 2.67;
+          const double latency = 0.05;
+
+          // Account for Latency
+          px = px + v * cos(psi) * latency;
+          psi = psi - v * steer_value / Lf * latency;
+          v = v + throttle_value * latency;
+
           vector<double> waypoints_x;
           vector<double> waypoints_y;
 
@@ -121,10 +132,8 @@ int main() {
           double cte = polyeval(coeffs, 0);
 
           // Calculate orientation error.
-          double epsi = -atan(coeffs[1]);
-
-          double steer_value = j[1]["steering_angle"];
-          double throttle_value = j[1]["throttle"];
+          double epsi = psi - atan(
+              coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] * pow(px, 2));
 
           // State in vehicle coordinates: x,y and orientation are always zero
           Eigen::VectorXd state(6);
@@ -136,7 +145,7 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          steer_value = -result[0] / deg2rad(25) * 2.67;
+          steer_value = -result[0] / deg2rad(25) * Lf;
           throttle_value = result[1];
 
           json msgJson;
